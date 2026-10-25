@@ -76,7 +76,11 @@ final class StubDelegate: NSObject, NSApplicationDelegate {
             let logDir = home + "/Library/Logs/GameModeHelper"
             try? FileManager.default.createDirectory(atPath: logDir, withIntermediateDirectories: true)
             let logLine = "[\(String(format: "%.2f", Date().timeIntervalSince1970))] wrapper exec → \(prog)\n"
-            if let h = FileHandle(forWritingAtPath: logDir + "/wrapper.log") {
+            let logFile = logDir + "/wrapper.log"
+            if !FileManager.default.fileExists(atPath: logFile) {
+                FileManager.default.createFile(atPath: logFile, contents: nil)
+            }
+            if let h = FileHandle(forWritingAtPath: logFile) {
                 h.seekToEndOfFile(); let _ = try? h.write(logLine.data(using: .utf8)!); try? h.close()
             }
             var wargv: [UnsafeMutablePointer<CChar>?] = [strdup(prog)]
