@@ -69,6 +69,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate,
         lastCloseTime = Date().timeIntervalSince1970
     }
 
+    func applicationWillTerminate(_ notification: Notification) {
+        core.log("App 退出（用户操作）——HMCL 接线配置与备份保留在磁盘")
+    }
+
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {

@@ -163,7 +163,7 @@ $BIN --auth-test             # diagnose the admin authorization cache
 ## Restore & uninstall
 
 - **Restore an app**: select it in the panel → "还原默认" (restores the original Info.plist and re-signs)
-- **Uninstall the tool**:
+- **Uninstall the tool**: click "退出" (Quit) at the bottom of the panel first, then:
 
 ```bash
 mv ~/Applications/GameModeHelper.app ~/.Trash/

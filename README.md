@@ -173,7 +173,7 @@ $BIN --auth-test             # 诊断：验证管理员授权缓存
 ## 还原与卸载
 
 - **还原某个 App**：面板中选中它 →「还原默认」（会从备份恢复原始 Info.plist 并重签）
-- **卸载工具**：
+- **卸载工具**：先在面板底部点「退出」，然后：
 
 ```bash
 mv ~/Applications/GameModeHelper.app ~/.Trash/

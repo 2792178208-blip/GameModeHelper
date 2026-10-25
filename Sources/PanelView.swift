@@ -139,6 +139,14 @@ struct PanelView: View {
                     NSWorkspace.shared.open(core_logDirURL())
                 }
                 .font(.caption)
+                Button {
+                    model.quitApp()
+                } label: {
+                    Label("退出", systemImage: "power")
+                }
+                .font(.caption)
+                .disabled(model.isBusy)
+                .help("退出本工具（配置与备份保留，随时可重新打开）")
             }
             Text("随时可一键还原；不会自行退出任何 App（重启需你确认）。")
                 .font(.caption2)

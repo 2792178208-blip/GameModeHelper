@@ -341,6 +341,18 @@ final class PanelModel: ObservableObject {
         let a = NSAlert(); a.messageText = text; a.addButton(withTitle: "好"); a.runModal()
     }
 
+    /// 面板「退出」：确认后结束本工具（接线配置与备份保留在磁盘，不受影响）
+    func quitApp() {
+        let alert = NSAlert()
+        alert.messageText = "退出游戏模式助手？"
+        alert.informativeText = "菜单栏图标将消失。已接入的 HMCL 配置、包装器和备份都保留在磁盘上，随时可重新打开继续使用。"
+        alert.addButton(withTitle: "退出")
+        alert.addButton(withTitle: "取消")
+        if alert.runModal() == .alertFirstButtonReturn {
+            NSApp.terminate(nil)
+        }
+    }
+
     /// 面板「管理员授权」按钮：预先授权，本会话内后续操作全部免密
     func preAuthorize() {
         isBusy = true
