@@ -71,7 +71,7 @@ final class PanelModel: ObservableObject {
         if app.isBareProcess {
             selectedState = .unsupported
             statusText = "「\(app.name)」是裸程序（无 App 包，如 Java）"
-            detailText = "点「开启」将自动生成游戏模式包装器并接入 HMCL：之后从 HMCL 正常启动的游戏（如 Minecraft）天生带游戏身份，原生全屏时自动开启游戏模式。当前正在运行的本局需重启后生效。"
+            detailText = "点「开启」将自动生成游戏模式包装器并接入 HMCL：之后从 HMCL 正常启动的游戏（如 Minecraft）天生带游戏身份，原生全屏时自动开启游戏模式。当前正在运行的本局需重启后生效。\n提示：Game Mode 调度因游戏和机型而异，个别游戏开启后可能反而变卡——按 ⌘Esc 可随时关闭该 App 的游戏模式。"
             return
         }
         if app.isSystemVolume {

@@ -8,8 +8,31 @@
 
 ### 新增
 
-- 游戏模式启动器：为 Java/jar、裸可执行程序生成带游戏声明的替身 App（GameStub 模式，
-  execv 继承身份），把可用范围扩展到没有 App 包的程序；含透传模式（实验性）
+- **游戏模式启动器**：为 Java/jar、裸可执行程序生成带游戏声明的替身 App
+  （GameStub 模式，运行器以 App 身份注册后 execv 目标程序，PID 继承游戏身份）
+- **HMCL 全自动接入**：面板显示正在运行的裸程序（java 等）；选中点开启即自动
+  生成包装器并写入 HMCL 全部实例的包装命令——同时支持新设置系统
+  （`instance-game-settings.json` + `overrideProperties` + 全局 preset）与旧版
+  `hmclversion.cfg`，全部带备份可一键还原；HMCL 重启后生效
+- 透传模式（实验性）：替身运行器可作为启动器的"自定义 Java"被调用，参数原样转交
+- 运行器诊断日志（`~/Library/Logs/GameModeHelper/wrapper.log`）
+- CLI 新增 `--auth-test`（管理员授权缓存诊断）
+
+### 修复
+
+- 运行中的 App 开启失败：改用 Sparkle 式副本替换补丁，失败自动回滚
+- 重签丢失沙盒 entitlements → 选择性保留 `com.apple.security.*`
+- 管理员密码反复弹窗 → AuthorizationRef 会话内一次授权复用
+- 只读系统卷（Safari 等）误弹密码框 → 明确拒绝并说明
+- HMCL 接线的成功提示被列表刷新覆盖、重复点击产生多个替身 → 提示稳定显示 + 幂等收敛固定路径
+- 自检挂死：改为先优雅退出假 App 再还原（全程零密码，33 秒跑完）
+
+### 已知限制
+
+- 游戏身份在进程启动时判定：已运行的进程无法事后加入（需重启该 App/游戏）
+- HMCL 接线需重启 HMCL 后生效（其设置仅启动时读取）
+- Game Mode 调度因游戏和机型而异，个别游戏（如某些机器上的 Minecraft Java）开启后
+  可能反而变卡——按 ⌘Esc 可随时按 App 关闭
 
 ## [1.0.0] - 2026-10-25
 
