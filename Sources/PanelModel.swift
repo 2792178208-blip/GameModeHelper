@@ -210,7 +210,7 @@ final class PanelModel: ObservableObject {
     func createGameLauncher() {
         let alert = NSAlert()
         alert.messageText = "创建游戏模式启动器"
-        alert.informativeText = "生成一个自带游戏模式声明的替身 App：双击它即以游戏身份启动目标程序。适合 Java/jar、裸可执行程序等没有 App 包的程序（Minecraft、jar 工具等）。"
+        alert.informativeText = "生成一个自带游戏模式声明的替身 App：双击它即以游戏身份启动目标程序。适合你能直接启动的程序（jar、裸可执行程序等）。\n注意：HMCL 等启动器拉起的游戏请在列表中选择 java 条目自动接线，不要用本对话框包装启动器本身（替身身份不会传递给启动器的子进程）。"
         alert.alertStyle = .informational
 
         let name = NSTextField(string: "")
