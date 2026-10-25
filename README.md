@@ -5,7 +5,7 @@
 [![macOS](https://img.shields.io/badge/macOS-14%2B-black)](#系统要求)
 [![Platform](https://img.shields.io/badge/Apple%20Silicon-only-orange)](#系统要求)
 
-**[English](README_EN.md)** ｜ 中文
+**[English](README_EN.md)** ｜ **[英文版仓库 EN repo](https://github.com/2792178208-blip/GameModeHelper-EN)** ｜ 中文
 
 一个 macOS 桌面小工具（主窗口应用）：给**任意 App** 补上系统游戏模式声明，让它全屏运行时被 macOS
 自动开启 **Game Mode**（CPU/GPU 优先调度、后台任务降载、蓝牙键鼠手柄采样率翻倍）。

@@ -7,6 +7,9 @@
 
 English ｜ **[中文](README.md)**
 
+> 🌍 A standalone fully-English repository (translated manual/changelog/contributing) is
+> available at **[GameModeHelper-EN](https://github.com/2792178208-blip/GameModeHelper-EN)**
+
 A macOS desktop utility (main-window app) that adds the **Game Mode declaration to any app**, so macOS
 automatically turns on **Game Mode** (CPU/GPU priority, reduced background activity, doubled
 Bluetooth accessory polling rate) whenever the app runs in native fullscreen.
