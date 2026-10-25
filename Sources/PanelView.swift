@@ -58,6 +58,13 @@ struct PanelView: View {
                                 .background(Color.accentColor.opacity(0.22))
                                 .clipShape(RoundedRectangle(cornerRadius: 4))
                         }
+                        if app.isBareProcess {
+                            Text("裸程序").font(.caption2)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(Color.secondary.opacity(0.14))
+                                .clipShape(RoundedRectangle(cornerRadius: 4))
+                        }
                         if app.isSystemVolume {
                             Text("系统卷").font(.caption2)
                                 .padding(.horizontal, 5)

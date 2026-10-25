@@ -86,17 +86,19 @@ Minecraft（HMCL 启动）、jar 工具这类**没有 App 包**的程序，系�
 `Found game GameProcess("GameStubRunner", labelReason=LSSupportsGameMode (Info.plist))`
 → 全屏 → `Game mode status is now on.`
 
-**HMCL 接入（Minecraft 本体进游戏模式）**：
+**HMCL 全自动接入（Minecraft 本体进游戏模式）**：
 
-1. 面板底部「创建启动器…」→ 勾选**透传模式** →「创建」（Java 自动探测；游戏用 HMCL 自带
-   JRE 的话，把"程序路径"填成该 JRE 的 `bin/java`）
-2. 记下生成的 `~/Applications/<名称>.app/Contents/MacOS/GameStubRunner` 路径
-3. HMCL → 实例设置 → Java → 添加自定义 Java → 选择这个 `GameStubRunner` 并设为实例 Java
-4. 正常启动 Minecraft → 原生全屏（⌃⌘F）→ 游戏模式自动开启
+1. 启动 HMCL —— 面板列表会出现带「裸程序」徽标的 `java` 条目（HMCL 本体）
+2. 选中它 → 点「开启游戏模式支持」—— 工具自动完成全部接线：
+   生成带游戏声明的包装器替身，并把 HMCL 所有游戏实例的包装命令指向它（原配置备份为
+   `.gmhelper-bak`，可随时还原）
+3. **照常从 HMCL 启动游戏**：HMCL 实际经由包装器启动 java，游戏天生带游戏身份
+4. 游戏切到**原生全屏**（⌃⌘F 或窗口绿色按钮）→ 游戏模式自动开启；按 ⌘Esc 可查看状态
 
-说明：透传模式 = HMCL 调用的其实是替身运行器，它以游戏身份注册后把参数原样转交给真实 Java。
-替身注册身份约需 0.5 秒（HMCL 探测 Java 会略慢，正常）。游戏内"全屏"若是无边框模式，
-请改用系统原生全屏（⌃⌘F），否则不会触发。
+说明：包装器以游戏身份注册后把进程镜像替换（execv）为真实 java，PID 不变、身份继承。
+包装器注册身份约需 0.5 秒（HMCL 探测 Java 会略慢，正常）。**当前正在运行的游戏本局**
+不受影响，重启游戏后生效。游戏内"全屏"若是无边框模式，请改用系统原生全屏，否则不会触发。
+不需要时：选中该 java 条目点「还原默认」即可自动恢复所有实例的原配置。
 
 ## 6. 还原（关闭某个 App 的游戏模式支持）
 

@@ -6,10 +6,11 @@ enum StubGenerator {
 
     /// 替身运行时配置（与 Resources/GameStubRunner 读取的 config.json 同构）
     struct StubConfig: Codable {
-        let program: String
+        var program: String?
         var args: [String] = []
         var cwd: String?
         var passthrough: Bool = false
+        var wrapper: Bool = false
     }
 
     enum StubResult {
@@ -23,6 +24,7 @@ enum StubGenerator {
         let args: [String]      // 启动参数
         let cwd: String?        // 工作目录（可为空）
         let passthrough: Bool   // 透传模式：启动器把本程序当"自定义 Java/包装命令"调用时，参数原样转交
+        var wrapper: Bool = false // 包装模式：HMCL 的 wrapper 字段调用（<运行器> <程序> <参数…>）
         let destination: URL?   // 目标目录；nil = ~/Applications
     }
 
@@ -85,7 +87,8 @@ enum StubGenerator {
 
             // 3. config.json（替身运行时读取）
             let config = StubConfig(program: spec.program, args: spec.args,
-                                    cwd: spec.cwd, passthrough: spec.passthrough)
+                                    cwd: spec.cwd, passthrough: spec.passthrough,
+                                    wrapper: spec.wrapper)
             do {
                 let data = try JSONEncoder().encode(config)
                 try data.write(to: tmpApp.appendingPathComponent("Contents/config.json"))

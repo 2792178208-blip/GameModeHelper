@@ -10,6 +10,8 @@ struct AppEntry: Identifiable, Equatable {
     var isFrontmost: Bool = false
     /// 位于只读系统卷（SIP 保护，无法修改，如 Safari）
     var isSystemVolume: Bool = false
+    /// 裸程序：无 App 包直接运行的进程（java、jar 启动的 Minecraft 等）
+    var isBareProcess: Bool = false
     /// 游戏模式声明状态
     var supportState: SupportState = .unknown
 

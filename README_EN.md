@@ -98,25 +98,26 @@ give them a game identity. This tool can wrap them into a declared stub app (Gam
 3. Click "创建" — a `~/Applications/<name>.app` is generated; double-click it to launch the
    target program with a game identity, and Game Mode turns on at fullscreen
 
-### HMCL integration (Game Mode for the Minecraft process itself)
+### One-click HMCL integration (Game Mode for the Minecraft process itself)
 
 A Minecraft process already spawned by HMCL cannot be added retroactively (identity is decided
-at process launch — experimentally verified). The correct approach: make HMCL launch java
-through the stub — the stub registers as a game and then execs the real java, so Minecraft
-inherits the identity. Steps:
+at process launch — experimentally verified). But the flow is now **fully automatic**:
 
-1. Click "创建启动器…" (Create launcher) → check **passthrough mode** → "创建"
-   (the Java path is auto-detected; if your game uses HMCL's bundled JRE, fill in that JRE's
-   `bin/java` as the real Java path)
-2. Note the generated path: `~/Applications/<name>.app/Contents/MacOS/GameStubRunner`
-3. In HMCL → instance (or global) settings → **Java** → add a custom Java → select that
-   `GameStubRunner` → choose it as the instance's Java
-4. Launch Minecraft from HMCL as usual (HMCL actually invokes the stub; arguments are forwarded
-   to the real Java)
-5. Put Minecraft into **native fullscreen** (⌃⌘F or the green window button; if the in-game
-   "fullscreen" option is borderless, use the system fullscreen instead) → Game Mode turns on
+1. Start HMCL — the panel list shows it as a `java` entry badged "裸程序" (bare process)
+2. Select it → click "开启游戏模式支持" (Enable Game Mode support)
+3. Done. The tool automatically: generates a declared wrapper stub → points the `wrapper`
+   field of every HMCL game instance at it (original configs backed up as `.gmhelper-bak`)
+4. Launch games from HMCL as usual: HMCL now starts java through the wrapper, the game
+   inherits a game identity, and Game Mode turns on at native fullscreen (⌃⌘F) — for every
+   instance using that Java
 
-Note: the stub needs ~0.5 s to register its identity, so HMCL's Java version probe becomes
+How it works: HMCL's launch command becomes `<wrapper> <java> <game args>`; the wrapper
+registers as a game and execs the real java — same PID, inherited identity (verified via
+`gamepolicyd` logs: `Found game … labelReason=LSSupportsGameMode (Info.plist)` → fullscreen →
+`Game mode status is now on.`). Restore: select the java entry and click "还原默认" to restore
+all instance configs automatically.
+
+Note: the wrapper needs ~0.5 s to register its identity, so HMCL's Java version probe becomes
 slightly slower — normal; game output is unaffected.
 
 ## FAQ

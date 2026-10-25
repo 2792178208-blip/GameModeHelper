@@ -68,6 +68,12 @@ final class PanelModel: ObservableObject {
             return
         }
         selectedState = app.supportState
+        if app.isBareProcess {
+            selectedState = .unsupported
+            statusText = "「\(app.name)」是裸程序（无 App 包，如 Java）"
+            detailText = "点「开启」将自动生成游戏模式包装器并接入 HMCL：之后从 HMCL 正常启动的游戏（如 Minecraft）天生带游戏身份，原生全屏时自动开启游戏模式。当前正在运行的本局需重启后生效。"
+            return
+        }
         if app.isSystemVolume {
             statusText = "「\(app.name)」是系统自带 App（只读系统卷）"
             detailText = "它受 SIP 保护、位于只读系统卷上，无法修改声明，因此不能通过本工具开启游戏模式。"
@@ -90,6 +96,21 @@ final class PanelModel: ObservableObject {
 
     func enableSelected() {
         guard let app = selectedApp else { return }
+        if app.isBareProcess {
+            isBusy = true
+            statusText = "正在生成游戏模式包装器并接入 HMCL…"
+            detailText = ""
+            core.setupWrapperForJava(executablePath: app.path) { [weak self] title, detail in
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    self.isBusy = false
+                    self.statusText = "✅ \(title)"
+                    self.detailText = detail
+                    self.refresh()
+                }
+            }
+            return
+        }
         isBusy = true
         core.enableGameMode(path: app.path) { [weak self] outcome in
             DispatchQueue.main.async {
@@ -111,6 +132,19 @@ final class PanelModel: ObservableObject {
 
     func disableSelected() {
         guard let app = selectedApp else { return }
+        if app.isBareProcess {
+            isBusy = true
+            core.unwireHMCL { [weak self] title, detail in
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    self.isBusy = false
+                    self.statusText = "✅ \(title)"
+                    self.detailText = detail
+                    self.refresh()
+                }
+            }
+            return
+        }
         isBusy = true
         core.disableGameMode(path: app.path) { [weak self] outcome in
             DispatchQueue.main.async {

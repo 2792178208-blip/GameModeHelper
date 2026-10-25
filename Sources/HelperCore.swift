@@ -132,9 +132,158 @@ final class HelperCore {
                                    isSystemVolume: isReadOnlyVolume(url.path),
                                    supportState: supportState(at: url.path)))
         }
+        // 裸进程合并进列表（java、jar 启动的 Minecraft 等无 App 包的程序）
+        var known = Set(result.map { $0.path })
+        for path in runningBareProcessPaths() where !known.contains(path) {
+            known.insert(path)
+            result.append(AppEntry(bundleID: "bare:" + path,
+                                   name: (path as NSString).lastPathComponent,
+                                   path: path,
+                                   isRunning: true,
+                                   isBareProcess: true,
+                                   supportState: .unsupported))
+        }
         return result.sorted {
             if $0.isFrontmost != $1.isFrontmost { return $0.isFrontmost }
             return $0.name.localizedStandardCompare($1.name) == .orderedAscending
+        }
+    }
+
+    /// 枚举正在运行的「裸进程」（无 App 包、当前用户启动）：java、jar 启动的 Minecraft 等。
+    /// 通过 sysctl 全量进程表 + proc_pidpath 取真实可执行路径。
+    func runningBareProcessPaths() -> [String] {
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_ALL]
+        var size = 0
+        guard sysctl(&mib, u_int(mib.count), nil, &size, nil, 0) == 0, size > 0 else { return [] }
+        let count = size / MemoryLayout<kinfo_proc>.stride
+        var procs = [kinfo_proc](repeating: kinfo_proc(), count: count)
+        guard sysctl(&mib, u_int(mib.count), &procs, &size, nil, 0) == 0 else { return [] }
+
+        let myUID = getuid()
+        var out: Set<String> = []
+        for p in procs {
+            let pid = p.kp_proc.p_pid
+            guard pid > 1, Int(p.kp_eproc.e_ucred.cr_uid) == myUID else { continue }
+            var buf = [CChar](repeating: 0, count: 4096)
+            guard proc_pidpath(pid, &buf, UInt32(buf.count)) > 0 else { continue }
+            let path = String(cString: buf)
+            // 排除：App 包内的（已在 App 列表）、系统目录、本工具自身、常见 shell
+            if path.contains("/.app/") || path.contains("GameModeHelper") { continue }
+            if path.hasPrefix("/System/") || path.hasPrefix("/usr/libexec/")
+                || path.hasPrefix("/usr/sbin/") || path.hasPrefix("/sbin/") || path.hasPrefix("/usr/lib/") { continue }
+            let base = (path as NSString).lastPathComponent
+            if ["zsh", "bash", "sh", "fish", "tcsh", "login"].contains(base) { continue }
+            out.insert(path)
+        }
+        return out.sorted()
+    }
+
+    /// 为裸程序（java 等）生成包装器替身，并自动接入 HMCL 实例配置（wrapper 字段，带备份）。
+    /// 返回 (标题, 详情)。
+    func setupWrapperForJava(executablePath: String, completion: @escaping (String, String) -> Void) {
+        patchQueue.async { [weak self] in
+            guard let self else { return }
+            let fm = self.fm
+            let base = (executablePath as NSString).lastPathComponent
+            // HMCL 的 wrapper 按空格分词，替身名不能有空格
+            let isJava = base.lowercased().contains("java")
+            let stubName = isJava ? "HMCL游戏模式包装器" : "\(base)游戏模式包装器".replacingOccurrences(of: " ", with: "_")
+
+            let sem = DispatchSemaphore(value: 0)
+            var stubPath = ""
+            var genErr = ""
+            StubGenerator.generate(.init(name: stubName, program: executablePath, args: [],
+                                         cwd: nil, passthrough: false, wrapper: true,
+                                         destination: nil)) { r in
+                switch r {
+                case .success(let u): stubPath = u
+                case .failure(let m): genErr = m
+                }
+                sem.signal()
+            }
+            sem.wait()
+            guard !stubPath.isEmpty else {
+                self.log("包装器生成失败：\(genErr)")
+                completion("生成失败", genErr); return
+            }
+            let runnerPath = (stubPath as NSString).appendingPathComponent("Contents/MacOS/GameStubRunner")
+
+            // 发现 HMCL 游戏目录并接线（versions/*/hmclversion.cfg 的 wrapper 字段）
+            var gameDirs: [String] = []
+            let dirsFile = fm.homeDirectoryForCurrentUser
+                .appendingPathComponent("Library/Application Support/hmcl/config/user-game-directories.json")
+            if let data = try? Data(contentsOf: dirsFile),
+               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let dirs = obj["directories"] as? [[String: Any]] {
+                for d in dirs { if let p = d["path"] as? String { gameDirs.append(p) } }
+            }
+            let defaultDir = fm.homeDirectoryForCurrentUser
+                .appendingPathComponent("Library/Application Support/minecraft").path
+            if fm.fileExists(atPath: defaultDir), !gameDirs.contains(defaultDir) { gameDirs.append(defaultDir) }
+
+            var wired = 0, skipped = 0
+            for dir in gameDirs {
+                let versionsDir = dir + "/versions"
+                guard let items = try? fm.contentsOfDirectory(atPath: versionsDir) else { continue }
+                for v in items {
+                    let cfg = versionsDir + "/" + v + "/hmclversion.cfg"
+                    guard fm.fileExists(atPath: cfg),
+                          let data = try? Data(contentsOf: URL(fileURLWithPath: cfg)),
+                          var obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { continue }
+                    let cur = obj["wrapper"] as? String ?? ""
+                    if !cur.isEmpty { skipped += 1; continue }   // 用户手动配过包装命令，不覆盖
+                    if !fm.fileExists(atPath: cfg + ".gmhelper-bak") {
+                        try? fm.copyItem(atPath: cfg, toPath: cfg + ".gmhelper-bak")
+                    }
+                    obj["wrapper"] = runnerPath
+                    guard let out = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]),
+                          (try? out.write(to: URL(fileURLWithPath: cfg))) != nil else { continue }
+                    wired += 1
+                    self.log("已接线 HMCL 实例 \(v)：wrapper → 包装器")
+                }
+            }
+            self.log("包装器：\(stubPath)；接线 \(wired) 个实例（跳过 \(skipped)）")
+
+            let title = wired > 0 ? "已自动接入 HMCL（\(wired) 个实例）" : "包装器已生成"
+            let detail = wired > 0
+                ? "从 HMCL 正常启动游戏即可：HMCL 会经由包装器启动 java，游戏天生带游戏身份，原生全屏（⌃⌘F）时自动开启游戏模式。当前正在运行的本局需重启游戏后生效。\n包装器：\(runnerPath)\n已跳过 \(skipped) 个手动配置过包装命令的实例。"
+                : "未找到可自动接线的 HMCL 实例配置。可在 HMCL 实例设置的「包装命令/Wrapper」中填入：\(runnerPath)"
+            completion(title, detail)
+        }
+    }
+
+    /// 还原：把接线时备份的 hmclversion.cfg 恢复（清空 wrapper）
+    func unwireHMCL(completion: @escaping (String, String) -> Void) {
+        patchQueue.async { [weak self] in
+            guard let self else { return }
+            let fm = self.fm
+            var restored = 0
+            let dirsFile = fm.homeDirectoryForCurrentUser
+                .appendingPathComponent("Library/Application Support/hmcl/config/user-game-directories.json")
+            var gameDirs: [String] = []
+            if let data = try? Data(contentsOf: dirsFile),
+               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let dirs = obj["directories"] as? [[String: Any]] {
+                for d in dirs { if let p = d["path"] as? String { gameDirs.append(p) } }
+            }
+            let defaultDir = fm.homeDirectoryForCurrentUser
+                .appendingPathComponent("Library/Application Support/minecraft").path
+            gameDirs.append(defaultDir)
+            for dir in gameDirs {
+                let versionsDir = dir + "/versions"
+                guard let items = try? fm.contentsOfDirectory(atPath: versionsDir) else { continue }
+                for v in items {
+                    let bak = versionsDir + "/" + v + "/hmclversion.cfg.gmhelper-bak"
+                    guard fm.fileExists(atPath: bak) else { continue }
+                    let cfg = (bak as NSString).deletingPathExtension
+                    try? fm.removeItem(atPath: cfg)
+                    try? fm.moveItem(atPath: bak, toPath: cfg)
+                    restored += 1
+                    self.log("已还原 HMCL 实例 \(v) 的包装命令配置")
+                }
+            }
+            completion(restored > 0 ? "已还原 \(restored) 个 HMCL 实例的包装命令设置" : "没有需要还原的接线",
+                      "重启对应游戏后生效。")
         }
     }
 

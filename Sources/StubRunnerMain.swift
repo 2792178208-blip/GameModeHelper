@@ -16,10 +16,31 @@ import AppKit
 var savedStderr: Int32 = -1
 
 struct StubConfig: Codable {
-    let program: String
+    var program: String?
     var args: [String] = []
     var cwd: String?
     var passthrough: Bool = false
+    var wrapper: Bool = false
+
+    // 手写解码：所有键均可缺省（wrapper 模式的 config 只有一行 {"wrapper": true}）
+    init(program: String? = nil, args: [String] = [], cwd: String? = nil,
+         passthrough: Bool = false, wrapper: Bool = false) {
+        self.program = program; self.args = args; self.cwd = cwd
+        self.passthrough = passthrough; self.wrapper = wrapper
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        program = try c.decodeIfPresent(String.self, forKey: .program)
+        args = try c.decodeIfPresent([String].self, forKey: .args) ?? []
+        cwd = try c.decodeIfPresent(String.self, forKey: .cwd)
+        passthrough = try c.decodeIfPresent(Bool.self, forKey: .passthrough) ?? false
+        wrapper = try c.decodeIfPresent(Bool.self, forKey: .wrapper) ?? false
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case program, args, cwd, passthrough, wrapper
+    }
 }
 
 final class StubDelegate: NSObject, NSApplicationDelegate {
@@ -38,7 +59,27 @@ final class StubDelegate: NSObject, NSApplicationDelegate {
     private func execProgram() {
         // 恢复真实 stderr 再 exec，让启动器/终端能看到游戏输出
         if savedStderr != -1 { dup2(savedStderr, STDERR_FILENO); close(savedStderr) }
-        let program = cfg.program
+
+        // 包装模式（HMCL 等启动器的 wrapper 字段）：启动器以
+        //   <本运行器> <真实程序> <程序参数…>
+        // 方式调用；本进程以游戏身份注册后，把镜像替换为 argv[1]，
+        // 游戏进程 PID 不变，天生继承游戏身份。
+        if cfg.wrapper {
+            let a = CommandLine.arguments
+            guard a.count >= 2 else {
+                fputs("GameStubRunner: 包装模式需要至少一个参数（要启动的程序）\n", stderr)
+                exit(1)
+            }
+            let prog = a[1]
+            var wargv: [UnsafeMutablePointer<CChar>?] = [strdup(prog)]
+            for arg in a.dropFirst(2) { wargv.append(strdup(arg)) }
+            wargv.append(nil)
+            execv(prog, &wargv)
+            fputs("GameStubRunner: 包装启动 \(prog) 失败（errno=\(errno)）\n", stderr)
+            exit(127)
+        }
+
+        let program = cfg.program ?? ""
         let argList: [String]
         if cfg.passthrough {
             // 透传模式：argv[0] 起就是目标程序需要的参数（java -Xmx… 等）
