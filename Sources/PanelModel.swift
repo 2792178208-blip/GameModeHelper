@@ -191,9 +191,25 @@ final class PanelModel: ObservableObject {
 
         // 透传模式：替身运行器作为启动器的"自定义 Java/包装命令"被调用，
         // 启动时把收到的参数原样转交给真实 Java（HMCL 等，实验性）
-        let passthrough = NSButton(checkboxWithTitle: "透传模式（供 HMCL 等启动器设置自定义 Java 时使用，实验性）",
+        let passthrough = NSButton(checkboxWithTitle: "透传模式（HMCL 接入：勾选后把启动器里的 Java 路径指向替身运行器）",
                                    target: nil, action: nil)
         var isPassthrough = false
+        final class CheckTrampoline: NSObject {
+            let handler: (NSButton) -> Void
+            init(_ handler: @escaping (NSButton) -> Void) { self.handler = handler; super.init() }
+            @objc func fire(_ sender: NSButton) { handler(sender) }
+        }
+        let checkTrampoline = CheckTrampoline { [weak path] box in
+            guard let path else { return }
+            if box.state == .on {
+                path.placeholderString = "真实 Java 路径（留空自动探测）"
+                if path.stringValue.isEmpty { path.stringValue = StubGenerator.whichJava() ?? "" }
+            } else {
+                path.placeholderString = "程序路径：可执行文件或 .jar"
+            }
+        }
+        passthrough.target = checkTrampoline
+        passthrough.action = #selector(CheckTrampoline.fire(_:))
 
         final class Trampoline: NSObject {
             let handler: () -> Void

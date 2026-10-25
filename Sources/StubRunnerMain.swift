@@ -12,6 +12,9 @@ import AppKit
 /// passthrough=true 时忽略 args，把启动本程序时收到的参数原样透传（HMCL 等
 /// 启动器以"自定义 Java 路径"方式调用本程序的场景，实验性）。
 
+/// 注册期保存的真实 stderr（恢复用）
+var savedStderr: Int32 = -1
+
 struct StubConfig: Codable {
     let program: String
     var args: [String] = []
@@ -28,10 +31,13 @@ final class StubDelegate: NSObject, NSApplicationDelegate {
             _ = FileManager.default.changeCurrentDirectoryPath(cwd)
         }
         // 给 LaunchServices/游戏策略一点注册时间，再把进程镜像替换为游戏本体
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [self] in execProgram() }
+        //（透传模式下启动器探测 Java 也会经过这里，0.5s 对探测无感知）
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [self] in execProgram() }
     }
 
     private func execProgram() {
+        // 恢复真实 stderr 再 exec，让启动器/终端能看到游戏输出
+        if savedStderr != -1 { dup2(savedStderr, STDERR_FILENO); close(savedStderr) }
         let program = cfg.program
         let argList: [String]
         if cfg.passthrough {
@@ -47,7 +53,9 @@ final class StubDelegate: NSObject, NSApplicationDelegate {
 
         execv(program, &argv)
         // 只有 exec 失败才会走到这里
-        fputs("GameStubRunner: 无法启动 \(program)（exec 失败，errno=\(errno)）\n", stderr)
+        let reason = errno == ENOENT ? "程序不存在" : errno == EACCES ? "没有执行权限" : "errno=\(errno)"
+        fputs("GameStubRunner: 无法启动 \(program)（\(reason)）。\n"
+              + "透传模式请检查 config.json 里 program 指向的 Java 是否有效。\n", stderr)
         exit(127)
     }
 }
@@ -68,6 +76,13 @@ case .failure(let err):
     fputs("GameStubRunner: 读取 config.json 失败——\(err)\n", stderr)
     exit(1)
 case .success(let cfg):
+    // 注册期静音 stderr：直接拉起（不经 LaunchServices）时 AppKit 会输出
+    // "sandbox_extension_issue_file_to_process" 噪音，会污染启动器的 Java 版本解析。
+    // execv 前在 execProgram 里恢复，真实程序的输出不受影响。
+    savedStderr = dup(STDERR_FILENO)
+    let devnull = open("/dev/null", O_WRONLY)
+    if devnull != -1 { dup2(devnull, STDERR_FILENO); close(devnull) }
+
     let app = NSApplication.shared
     let delegate = StubDelegate(cfg: cfg)
     app.delegate = delegate

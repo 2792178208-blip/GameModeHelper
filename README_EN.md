@@ -98,14 +98,26 @@ give them a game identity. This tool can wrap them into a declared stub app (Gam
 3. Click "创建" — a `~/Applications/<name>.app` is generated; double-click it to launch the
    target program with a game identity, and Game Mode turns on at fullscreen
 
-**HMCL users**: a Minecraft process already spawned by HMCL cannot be added retroactively
-(game identity is decided at process launch — experimentally verified). Workable approaches:
-- Use "Create launcher" for programs you can launch directly (e.g. a jar tool)
-- Experimental **passthrough mode**: the generated stub runner can be set as a launcher's
-  "custom Java / wrapper command" (point the launcher's Java path at the stub's
-  `GameStubRunner`; arguments are forwarded to the real Java). Whether HMCL accepts it depends
-  on its Java detection — launchers with a wrapper-command setting (e.g. Prism) fit better
-- Official clients like miHoYo's cloud games already ship the declaration themselves
+### HMCL integration (Game Mode for the Minecraft process itself)
+
+A Minecraft process already spawned by HMCL cannot be added retroactively (identity is decided
+at process launch — experimentally verified). The correct approach: make HMCL launch java
+through the stub — the stub registers as a game and then execs the real java, so Minecraft
+inherits the identity. Steps:
+
+1. Click "创建启动器…" (Create launcher) → check **passthrough mode** → "创建"
+   (the Java path is auto-detected; if your game uses HMCL's bundled JRE, fill in that JRE's
+   `bin/java` as the real Java path)
+2. Note the generated path: `~/Applications/<name>.app/Contents/MacOS/GameStubRunner`
+3. In HMCL → instance (or global) settings → **Java** → add a custom Java → select that
+   `GameStubRunner` → choose it as the instance's Java
+4. Launch Minecraft from HMCL as usual (HMCL actually invokes the stub; arguments are forwarded
+   to the real Java)
+5. Put Minecraft into **native fullscreen** (⌃⌘F or the green window button; if the in-game
+   "fullscreen" option is borderless, use the system fullscreen instead) → Game Mode turns on
+
+Note: the stub needs ~0.5 s to register its identity, so HMCL's Java version probe becomes
+slightly slower — normal; game output is unaffected.
 
 ## FAQ
 
