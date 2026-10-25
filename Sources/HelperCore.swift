@@ -247,6 +247,37 @@ final class HelperCore {
                 let versionsDir = dir + "/versions"
                 guard let items = try? fm.contentsOfDirectory(atPath: versionsDir) else { continue }
                 for v in items {
+                    // ── HMCL 3.16+ 新系统：<版本>/.hmcl/config/instance-game-settings.json ──
+                    let instDir = versionsDir + "/" + v + "/.hmcl/config"
+                    let instCfg = instDir + "/instance-game-settings.json"
+                    var instObj: [String: Any] = [:]
+                    var instExists = fm.fileExists(atPath: instCfg)
+                    if instExists,
+                       let data = try? Data(contentsOf: URL(fileURLWithPath: instCfg)),
+                       let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                        instObj = obj
+                    } else {
+                        instObj = ["$schema": "https://schemas.glavo.site/hmcl/instance-game-settings/1.0.0"]
+                    }
+                    let curWrapper = instObj["commandWrapper"] as? String ?? ""
+                    if curWrapper == runnerPath { already += 1 }
+                    else {
+                        if instExists, !fm.fileExists(atPath: instCfg + ".gmhelper-bak") {
+                            try? fm.copyItem(at: URL(fileURLWithPath: instCfg), to: URL(fileURLWithPath: instCfg + ".gmhelper-bak"))
+                        }
+                        if !instExists { try? fm.createDirectory(at: URL(fileURLWithPath: instDir), withIntermediateDirectories: true) }
+                        instObj["commandWrapper"] = runnerPath
+                        var ov = instObj["overrideProperties"] as? [String] ?? []
+                        if !ov.contains("commandWrapper") { ov.append("commandWrapper") }
+                        instObj["overrideProperties"] = ov
+                        if let out = try? JSONSerialization.data(withJSONObject: instObj, options: [.prettyPrinted]),
+                           (try? out.write(to: URL(fileURLWithPath: instCfg))) != nil {
+                            wired += 1
+                            self.log("已接线 HMCL 实例 \(v)（instance-game-settings：commandWrapper）")
+                        }
+                    }
+
+                    // ── 旧版 HMCL 兼容：hmclversion.cfg 的 wrapper 字段 ──
                     let cfg = versionsDir + "/" + v + "/hmclversion.cfg"
                     if !fm.fileExists(atPath: cfg) {
                         // 实例没有配置文件：创建最小配置
@@ -264,7 +295,7 @@ final class HelperCore {
                     if cur == runnerPath { already += 1; continue }   // 重复点击：已接线
                     if !cur.isEmpty { skipped += 1; continue }   // 用户手动配过包装命令，不覆盖
                     if !fm.fileExists(atPath: cfg + ".gmhelper-bak") {
-                        try? fm.copyItem(atPath: cfg, toPath: cfg + ".gmhelper-bak")
+                        try? fm.copyItem(at: URL(fileURLWithPath: cfg), to: URL(fileURLWithPath: cfg + ".gmhelper-bak"))
                     }
                     obj["wrapper"] = runnerPath
                     guard let out = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]),
@@ -316,6 +347,17 @@ final class HelperCore {
                 let versionsDir = dir + "/versions"
                 guard let items = try? fm.contentsOfDirectory(atPath: versionsDir) else { continue }
                 for v in items {
+                    // 新系统：instance-game-settings.json 恢复备份
+                    let instBak = versionsDir + "/" + v + "/.hmcl/config/instance-game-settings.json.gmhelper-bak"
+                    let instCfg = versionsDir + "/" + v + "/.hmcl/config/instance-game-settings.json"
+                    if fm.fileExists(atPath: instBak) {
+                        try? fm.removeItem(atPath: instCfg)
+                        try? fm.moveItem(atPath: instBak, toPath: instCfg)
+                        restored += 1
+                        self.log("已还原 HMCL 实例 \(v) 的实例设置（新系统）")
+                        continue
+                    }
+                    // 旧系统：hmclversion.cfg 恢复备份
                     let bak = versionsDir + "/" + v + "/hmclversion.cfg.gmhelper-bak"
                     guard fm.fileExists(atPath: bak) else { continue }
                     let cfg = (bak as NSString).deletingPathExtension
