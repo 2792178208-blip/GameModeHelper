@@ -106,7 +106,7 @@ final class PanelModel: ObservableObject {
                     self.isBusy = false
                     self.statusText = "✅ \(title)"
                     self.detailText = detail
-                    self.refresh()
+                    // 注意：这里不调用 refresh()——列表刷新会覆盖成功消息
                 }
             }
             return
@@ -140,7 +140,6 @@ final class PanelModel: ObservableObject {
                     self.isBusy = false
                     self.statusText = "✅ \(title)"
                     self.detailText = detail
-                    self.refresh()
                 }
             }
             return

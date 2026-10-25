@@ -221,16 +221,25 @@ final class HelperCore {
                 .appendingPathComponent("Library/Application Support/minecraft").path
             if fm.fileExists(atPath: defaultDir), !gameDirs.contains(defaultDir) { gameDirs.append(defaultDir) }
 
-            var wired = 0, skipped = 0
+            var wired = 0, skipped = 0, already = 0
             for dir in gameDirs {
                 let versionsDir = dir + "/versions"
                 guard let items = try? fm.contentsOfDirectory(atPath: versionsDir) else { continue }
                 for v in items {
                     let cfg = versionsDir + "/" + v + "/hmclversion.cfg"
-                    guard fm.fileExists(atPath: cfg),
-                          let data = try? Data(contentsOf: URL(fileURLWithPath: cfg)),
+                    if !fm.fileExists(atPath: cfg) {
+                        // 实例没有配置文件：创建最小配置（HMCL 读取时缺失字段走默认值）
+                        let minimal: [String: Any] = ["wrapper": runnerPath]
+                        guard let out = try? JSONSerialization.data(withJSONObject: minimal, options: [.prettyPrinted, .sortedKeys]),
+                              (try? out.write(to: URL(fileURLWithPath: cfg))) != nil else { continue }
+                        wired += 1
+                        self.log("已创建并接线 HMCL 实例 \(v)（原无配置文件）")
+                        continue
+                    }
+                    guard let data = try? Data(contentsOf: URL(fileURLWithPath: cfg)),
                           var obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { continue }
                     let cur = obj["wrapper"] as? String ?? ""
+                    if cur == runnerPath { already += 1; continue }   // 重复点击：已接线
                     if !cur.isEmpty { skipped += 1; continue }   // 用户手动配过包装命令，不覆盖
                     if !fm.fileExists(atPath: cfg + ".gmhelper-bak") {
                         try? fm.copyItem(atPath: cfg, toPath: cfg + ".gmhelper-bak")
@@ -242,7 +251,14 @@ final class HelperCore {
                     self.log("已接线 HMCL 实例 \(v)：wrapper → 包装器")
                 }
             }
-            self.log("包装器：\(stubPath)；接线 \(wired) 个实例（跳过 \(skipped)）")
+            self.log("包装器：\(stubPath)；接线 \(wired) 个实例（已接线 \(already)、跳过 \(skipped)）")
+
+            // 幂等：所有实例都已指向本包装器时不重复生成——删除刚生成的多余替身
+            if wired == 0, already > 0 {
+                try? fm.removeItem(atPath: stubPath)
+                completion("已经接入过了", "所有 HMCL 实例都已指向包装器，无需重复操作。从 HMCL 重启游戏即可生效。")
+                return
+            }
 
             let title = wired > 0 ? "已自动接入 HMCL（\(wired) 个实例）" : "包装器已生成"
             let detail = wired > 0
