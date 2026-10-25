@@ -229,6 +229,29 @@ final class HelperCore {
                 _ = self.run("/usr/bin/codesign", ["--force", "--deep", "--sign", "-", stubPath])
             }
 
+            // 双保险：把便携/用户两处 home 的全局 game-settings.json 里所有 preset 的
+            // commandWrapper 一并设置（未来新实例无实例文件时也能继承到包装器）
+            var presetHomes: [String] = []
+            let localHome = "/Users/\(NSUserName())/hmcl/.hmcl/config/game-settings.json"
+            let userHome = fm.homeDirectoryForCurrentUser
+                .appendingPathComponent("Library/Application Support/hmcl/config/game-settings.json").path
+            for h in [localHome, userHome] where fm.fileExists(atPath: h) { presetHomes.append(h) }
+            for presetFile in presetHomes {
+                guard let data = try? Data(contentsOf: URL(fileURLWithPath: presetFile)),
+                      var obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      var presets = obj["presets"] as? [[String: Any]] else { continue }
+                if !fm.fileExists(atPath: presetFile + ".gmhelper-bak") {
+                    try? fm.copyItem(at: URL(fileURLWithPath: presetFile),
+                                     to: URL(fileURLWithPath: presetFile + ".gmhelper-bak"))
+                }
+                for i in presets.indices { presets[i]["commandWrapper"] = runnerPath }
+                obj["presets"] = presets
+                if let out = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted]) {
+                    try? out.write(to: URL(fileURLWithPath: presetFile))
+                    self.log("已设置全局 preset 的 commandWrapper：\(presetFile)")
+                }
+            }
+
             // 发现 HMCL 游戏目录并接线（versions/*/hmclversion.cfg 的 wrapper 字段）
             var gameDirs: [String] = []
             let dirsFile = fm.homeDirectoryForCurrentUser
@@ -332,6 +355,18 @@ final class HelperCore {
             guard let self else { return }
             let fm = self.fm
             var restored = 0
+            // 恢复全局 preset 备份（两处 home）
+            let localHome = "/Users/\(NSUserName())/hmcl/.hmcl/config/game-settings.json"
+            let userHome = fm.homeDirectoryForCurrentUser
+                .appendingPathComponent("Library/Application Support/hmcl/config/game-settings.json").path
+            for presetFile in [localHome, userHome] {
+                let bak = presetFile + ".gmhelper-bak"
+                guard fm.fileExists(atPath: bak) else { continue }
+                try? fm.removeItem(atPath: presetFile)
+                try? fm.moveItem(atPath: bak, toPath: presetFile)
+                restored += 1
+                self.log("已还原全局 preset：\(presetFile)")
+            }
             let dirsFile = fm.homeDirectoryForCurrentUser
                 .appendingPathComponent("Library/Application Support/hmcl/config/user-game-directories.json")
             var gameDirs: [String] = []
