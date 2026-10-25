@@ -8,7 +8,7 @@ cd "$(dirname "$0")"
 MIN_MACOS="14.0"
 APP="GameModeHelper.app"
 SOURCES=(Sources/main.swift Sources/AppDelegate.swift Sources/HelperCore.swift
-         Sources/PrivilegedRunner.swift
+         Sources/PrivilegedRunner.swift Sources/StubGenerator.swift
          Sources/Models.swift Sources/PanelModel.swift Sources/PanelView.swift)
 
 echo "==> 清理旧构建"
@@ -21,9 +21,13 @@ swiftc -O -whole-module-optimization \
   -o build/GameModeHelper "${SOURCES[@]}" \
   -framework Cocoa -framework SwiftUI -framework UserNotifications
 
+echo "==> 编译游戏模式启动器运行器（GameStubRunner）"
+swiftc -O -o build/GameStubRunner Sources/StubRunnerMain.swift -framework Cocoa
+
 echo "==> 组装 App 包"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp build/GameModeHelper "$APP/Contents/MacOS/GameModeHelper"
+cp build/GameStubRunner "$APP/Contents/Resources/GameStubRunner"
 cp Info.plist "$APP/Contents/Info.plist"
 
 echo "==> 生成图标"

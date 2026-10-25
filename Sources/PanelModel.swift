@@ -173,6 +173,125 @@ final class PanelModel: ObservableObject {
         }
     }
 
+    /// 面板「创建启动器…」：为 Java/jar/任意程序生成带游戏声明的替身 App
+    func createGameLauncher() {
+        let alert = NSAlert()
+        alert.messageText = "创建游戏模式启动器"
+        alert.informativeText = "生成一个自带游戏模式声明的替身 App：双击它即以游戏身份启动目标程序。适合 Java/jar、裸可执行程序等没有 App 包的程序（Minecraft、jar 工具等）。"
+        alert.alertStyle = .informational
+
+        let name = NSTextField(string: "")
+        name.placeholderString = "替身名称（如：Minecraft 游戏模式）"
+        let path = NSTextField(string: "")
+        path.placeholderString = "程序路径：可执行文件或 .jar"
+        let args = NSTextField(string: "")
+        args.placeholderString = "启动参数（可选）"
+        let cwd = NSTextField(string: "")
+        cwd.placeholderString = "工作目录（可选，默认程序所在目录）"
+
+        // 透传模式：替身运行器作为启动器的"自定义 Java/包装命令"被调用，
+        // 启动时把收到的参数原样转交给真实 Java（HMCL 等，实验性）
+        let passthrough = NSButton(checkboxWithTitle: "透传模式（供 HMCL 等启动器设置自定义 Java 时使用，实验性）",
+                                   target: nil, action: nil)
+        var isPassthrough = false
+
+        final class Trampoline: NSObject {
+            let handler: () -> Void
+            init(_ handler: @escaping () -> Void) { self.handler = handler; super.init() }
+            @objc func fire() { handler() }
+        }
+        let trampoline = Trampoline {
+            let panel = NSOpenPanel()
+            panel.canChooseDirectories = false
+            panel.canChooseFiles = true
+            panel.allowsMultipleSelection = false
+            if panel.runModal() == .OK, let url = panel.url {
+                path.stringValue = url.path
+                if name.stringValue.isEmpty {
+                    name.stringValue = url.deletingPathExtension().lastPathComponent + "（游戏模式）"
+                }
+            }
+        }
+        let browse = NSButton(title: "浏览…", target: trampoline, action: #selector(Trampoline.fire))
+        browse.bezelStyle = .rounded
+
+        let grid = NSGridView(numberOfColumns: 2, rows: 0)
+        grid.addRow(with: [NSTextField(labelWithString: "名称"), name])
+        grid.addRow(with: [NSTextField(labelWithString: "程序"), path])
+        grid.addRow(with: [NSTextField(labelWithString: ""), browse])
+        grid.addRow(with: [NSTextField(labelWithString: "参数"), args])
+        grid.addRow(with: [NSTextField(labelWithString: "工作目录"), cwd])
+        grid.column(at: 1).width = 250
+        for row in 0..<grid.numberOfRows { grid.row(at: row).height = 26 }
+        grid.frame = NSRect(x: 0, y: 0, width: 360, height: CGFloat(grid.numberOfRows) * 26 + 8)
+        alert.accessoryView = grid
+        alert.addButton(withTitle: "创建")
+        alert.addButton(withTitle: "取消")
+        if alert.runModal() != .alertFirstButtonReturn { return }
+
+        var program = path.stringValue.trimmingCharacters(in: .whitespaces)
+        let argList = args.stringValue.split(whereSeparator: { $0 == " " }).map(String.init)
+
+        // 透传模式：程序路径 = 真实 Java（默认自动探测），替身把参数原样转交
+        if passthrough.state == .on {
+            let java = program.isEmpty ? StubGenerator.whichJava() : program
+            guard let java, !java.isEmpty else {
+                showNotice("透传模式需要真实 Java 路径（未找到 Java，请先安装 JDK）"); return
+            }
+            program = java
+            isPassthrough = true
+        }
+        guard !program.isEmpty else {
+            showNotice("未选择程序路径"); return
+        }
+        // .jar 自动包一层 java -jar
+        var extraNote = ""
+        var finalProgram = program
+        var finalArgs = argList
+        if program.hasSuffix(".jar") {
+            guard let java = StubGenerator.whichJava() else {
+                showNotice("未找到 Java。请先安装 JDK（HMCL 自带的 JRE 也可以：指向其 bin/java）。")
+                return
+            }
+            finalArgs = ["-jar", program] + argList
+            finalProgram = java
+            extraNote = "\n将使用 Java：\(java)"
+        }
+
+        isBusy = true
+        StubGenerator.generate(
+            .init(name: name.stringValue.isEmpty ? "游戏模式启动器" : name.stringValue,
+                  program: finalProgram,
+                  args: finalArgs,
+                  cwd: cwd.stringValue.isEmpty ? nil : cwd.stringValue,
+                  passthrough: isPassthrough,
+                  destination: nil)) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.isBusy = false
+                switch result {
+                case .success(let url):
+                    self.statusText = "✅ 启动器已创建：\((url as NSString).lastPathComponent)"
+                    if isPassthrough {
+                        let runner = (url as NSString).appendingPathComponent("Contents/MacOS/GameStubRunner")
+                        self.detailText = "已创建透传替身。把启动器（HMCL 等）里的 Java 路径设置为：\n\(runner)\n（实验性：以该方式启动的游戏全屏后即有游戏模式。）\(extraNote)"
+                    } else {
+                        self.detailText = "双击它即以游戏身份启动目标程序，全屏时 macOS 会自动开启游戏模式。\(extraNote)"
+                    }
+                    self.refresh()
+                case .failure(let message):
+                    self.statusText = "❌ 创建失败"
+                    self.detailText = message
+                }
+            }
+        }
+    }
+
+
+    private func showNotice(_ text: String) {
+        let a = NSAlert(); a.messageText = text; a.addButton(withTitle: "好"); a.runModal()
+    }
+
     /// 面板「管理员授权」按钮：预先授权，本会话内后续操作全部免密
     func preAuthorize() {
         isBusy = true

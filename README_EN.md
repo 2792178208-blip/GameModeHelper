@@ -87,6 +87,26 @@ cd GameModeHelper
 
 See **[docs/USAGE.md](docs/USAGE.md)** for the detailed step-by-step manual (in Chinese).
 
+## Java / jar / arbitrary programs: Game Mode launchers
+
+Minecraft (HMCL/PCL), jar tools and bare executables have no app bundle, so the system can't
+give them a game identity. This tool can wrap them into a declared stub app (GameStub pattern):
+
+1. Click **"创建启动器…" (Create launcher…)** at the bottom of the panel
+2. Fill in: name, program path (executable or `.jar` — automatically wrapped with `java -jar`),
+   arguments, working directory
+3. Click "创建" — a `~/Applications/<name>.app` is generated; double-click it to launch the
+   target program with a game identity, and Game Mode turns on at fullscreen
+
+**HMCL users**: a Minecraft process already spawned by HMCL cannot be added retroactively
+(game identity is decided at process launch — experimentally verified). Workable approaches:
+- Use "Create launcher" for programs you can launch directly (e.g. a jar tool)
+- Experimental **passthrough mode**: the generated stub runner can be set as a launcher's
+  "custom Java / wrapper command" (point the launcher's Java path at the stub's
+  `GameStubRunner`; arguments are forwarded to the real Java). Whether HMCL accepts it depends
+  on its Java detection — launchers with a wrapper-command setting (e.g. Prism) fit better
+- Official clients like miHoYo's cloud games already ship the declaration themselves
+
 ## FAQ
 
 **No Game Mode after fullscreen?** Check in order: ① did you click "Restart app to apply"

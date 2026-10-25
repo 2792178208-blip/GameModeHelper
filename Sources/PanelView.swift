@@ -121,6 +121,9 @@ struct PanelView: View {
             // 底部
             HStack {
                 Button("自检") { model.runSelfTest() }.font(.caption)
+                Button("创建启动器…") { model.createGameLauncher() }.font(.caption)
+                    .disabled(model.isBusy)
+                    .help("为 Java/jar、裸可执行程序生成带游戏模式声明的替身 App")
                 Button("管理员授权") { model.preAuthorize() }.font(.caption)
                     .disabled(model.isBusy)
                     .help("预先授权后，本次运行期间开启/还原/重启都不再需要密码")

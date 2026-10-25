@@ -582,6 +582,42 @@ final class HelperCore {
         }
         add("还原后假 App 可正常启动", launchOK2.status == 0 && running2, "还原不影响 App 启动")
 
+        // 3. 游戏模式启动器生成器（结构检查，不执行目标程序）
+        do {
+            let tempDir = fm.temporaryDirectory
+                .appendingPathComponent("gmstub-selftest-\(Int.random(in: 100_000...999_999))", isDirectory: true)
+            try? fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
+            let sem3 = DispatchSemaphore(value: 0)
+            var genPath: String?
+            var genError = ""
+            StubGenerator.generate(.init(name: "GM自检替身", program: "/usr/bin/true", args: [], cwd: nil,
+                                         passthrough: false, destination: tempDir)) { r in
+                switch r {
+                case .success(let u): genPath = u
+                case .failure(let m): genError = m
+                }
+                sem3.signal()
+            }
+            while sem3.wait(timeout: .now() + 0.1) == .timedOut {
+                sleepWithRunLoop(0.02)
+            }
+            var stubOK = false, keysOK = false
+            if let genPath {
+                let appURL = URL(fileURLWithPath: genPath)
+                stubOK = fm.fileExists(atPath: appURL.appendingPathComponent("Contents/MacOS/GameStubRunner").path)
+                    && fm.fileExists(atPath: appURL.appendingPathComponent("Contents/config.json").path)
+                let pbOut = run(plistBuddy, [
+                    "-c", "Print :LSSupportsGameMode", "-c", "Print :GCSupportsGameMode",
+                    "-c", "Print :LSApplicationCategoryType",
+                    appURL.appendingPathComponent("Contents/Info.plist").path])
+                keysOK = pbOut.status == 0 && pbOut.output.contains("true")
+                    && pbOut.output.contains("public.app-category.games")
+            }
+            add("游戏模式启动器生成", stubOK, stubOK ? "替身 App 结构完整（运行器 + 配置）" : "失败原因：\(genError)")
+            add("启动器游戏声明齐全", keysOK, "Info.plist 含双声明键与游戏分类")
+            try? fm.removeItem(at: tempDir)
+        }
+
         log("自检完成：\(results.filter { $0.status == .pass }.count) 通过 / \(results.filter { $0.status == .fail }.count) 失败")
         return results
     }

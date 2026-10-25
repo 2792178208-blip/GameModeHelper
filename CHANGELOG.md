@@ -4,6 +4,13 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.1.0] - 2026-10-25
+
+### 新增
+
+- 游戏模式启动器：为 Java/jar、裸可执行程序生成带游戏声明的替身 App（GameStub 模式，
+  execv 继承身份），把可用范围扩展到没有 App 包的程序；含透传模式（实验性）
+
 ## [1.0.0] - 2026-10-25
 
 首个公开发布版本。

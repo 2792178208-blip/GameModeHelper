@@ -69,6 +69,8 @@ DUMMY_DIR=$(mktemp -d /tmp/gmhelper-test.XXXXXX)
 # 写入会被判为需要管理员；裸二进制归因到调用方，走用户态快速路径，自检全程无需密码
 BIN="$DUMMY_DIR/gmhelper-bare"
 cp "$APP/Contents/MacOS/GameModeHelper" "$BIN"
+# 启动器生成器自检需要 GameStubRunner（裸二进制按同目录查找）
+cp "$APP/Contents/Resources/GameStubRunner" "$DUMMY_DIR/" 2>/dev/null || true
 cat > "$DUMMY_DIR/main.swift" <<'SWIFT'
 import Cocoa
 final class DummyDelegate: NSObject, NSApplicationDelegate {
