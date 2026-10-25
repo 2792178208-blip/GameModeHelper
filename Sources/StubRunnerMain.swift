@@ -71,6 +71,14 @@ final class StubDelegate: NSObject, NSApplicationDelegate {
                 exit(1)
             }
             let prog = a[1]
+            // 诊断日志：记录包装调用（供排查 HMCL 接入）
+            let home = FileManager.default.homeDirectoryForCurrentUser.path
+            let logDir = home + "/Library/Logs/GameModeHelper"
+            try? FileManager.default.createDirectory(atPath: logDir, withIntermediateDirectories: true)
+            let logLine = "[\(String(format: "%.2f", Date().timeIntervalSince1970))] wrapper exec → \(prog)\n"
+            if let h = FileHandle(forWritingAtPath: logDir + "/wrapper.log") {
+                h.seekToEndOfFile(); let _ = try? h.write(logLine.data(using: .utf8)!); try? h.close()
+            }
             var wargv: [UnsafeMutablePointer<CChar>?] = [strdup(prog)]
             for arg in a.dropFirst(2) { wargv.append(strdup(arg)) }
             wargv.append(nil)

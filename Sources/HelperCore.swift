@@ -189,24 +189,45 @@ final class HelperCore {
             let isJava = base.lowercased().contains("java")
             let stubName = isJava ? "HMCL游戏模式包装器" : "\(base)游戏模式包装器".replacingOccurrences(of: " ", with: "_")
 
-            let sem = DispatchSemaphore(value: 0)
-            var stubPath = ""
-            var genErr = ""
-            StubGenerator.generate(.init(name: stubName, program: executablePath, args: [],
-                                         cwd: nil, passthrough: false, wrapper: true,
-                                         destination: nil)) { r in
-                switch r {
-                case .success(let u): stubPath = u
-                case .failure(let m): genErr = m
+            // 固定路径：重复点击收敛到同一个替身（重命名会产生编号替身并破坏已接线配置）
+            let appsDir = fm.homeDirectoryForCurrentUser.appendingPathComponent("Applications", isDirectory: true)
+            let stubURL = appsDir.appendingPathComponent("\(stubName).app", isDirectory: true)
+            let stubPath = stubURL.path
+            let runnerPath = stubURL.appendingPathComponent("Contents/MacOS/GameStubRunner").path
+            let configPath = stubURL.appendingPathComponent("Contents/config.json").path
+
+            if !fm.fileExists(atPath: stubPath) {
+                let sem = DispatchSemaphore(value: 0)
+                var genErr = ""
+                StubGenerator.generate(.init(name: stubName, program: executablePath, args: [],
+                                             cwd: nil, passthrough: false, wrapper: true,
+                                             destination: appsDir)) { r in
+                    switch r {
+                    case .success(let u): _ = u
+                    case .failure(let m): genErr = m
+                    }
+                    sem.signal()
                 }
-                sem.signal()
+                sem.wait()
+                guard fm.fileExists(atPath: stubPath) else {
+                    self.log("包装器生成失败：\(genErr)")
+                    completion("生成失败", genErr); return
+                }
+            } else {
+                // 已存在：确保 config 与 runner 为最新（游戏 Java 路径可能变化）
+                let config = StubGenerator.StubConfig(program: executablePath, args: [],
+                                                      cwd: nil, passthrough: false, wrapper: true)
+                if let data = try? JSONEncoder().encode(config) {
+                    try? data.write(to: URL(fileURLWithPath: configPath))
+                }
+                if !fm.fileExists(atPath: runnerPath),
+                   let bundled = Bundle.main.path(forResource: "GameStubRunner", ofType: nil) {
+                    try? fm.copyItem(atPath: bundled, toPath: runnerPath)
+                    _ = self.run("/usr/bin/codesign", ["--force", "--deep", "--sign", "-", stubPath])
+                }
+                _ = self.run("/usr/bin/xattr", ["-rc", stubPath])
+                _ = self.run("/usr/bin/codesign", ["--force", "--deep", "--sign", "-", stubPath])
             }
-            sem.wait()
-            guard !stubPath.isEmpty else {
-                self.log("包装器生成失败：\(genErr)")
-                completion("生成失败", genErr); return
-            }
-            let runnerPath = (stubPath as NSString).appendingPathComponent("Contents/MacOS/GameStubRunner")
 
             // 发现 HMCL 游戏目录并接线（versions/*/hmclversion.cfg 的 wrapper 字段）
             var gameDirs: [String] = []
@@ -258,6 +279,11 @@ final class HelperCore {
                 try? fm.removeItem(atPath: stubPath)
                 completion("已经接入过了", "所有 HMCL 实例都已指向包装器，无需重复操作。从 HMCL 重启游戏即可生效。")
                 return
+            }
+
+            // 清理历史遗留的编号替身
+            for item in (try? fm.contentsOfDirectory(atPath: appsDir.path)) ?? [] where item.hasPrefix("\(stubName) ") && item.hasSuffix(".app") {
+                try? fm.removeItem(at: appsDir.appendingPathComponent(item))
             }
 
             let title = wired > 0 ? "已自动接入 HMCL（\(wired) 个实例）" : "包装器已生成"
