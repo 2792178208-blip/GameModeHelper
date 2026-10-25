@@ -249,8 +249,9 @@ final class HelperCore {
                 for v in items {
                     let cfg = versionsDir + "/" + v + "/hmclversion.cfg"
                     if !fm.fileExists(atPath: cfg) {
-                        // 实例没有配置文件：创建最小配置（HMCL 读取时缺失字段走默认值）
-                        let minimal: [String: Any] = ["wrapper": runnerPath]
+                        // 实例没有配置文件：创建最小配置
+                        // usesGlobal=false 必须显式声明——缺失时 HMCL 按全局设置处理，wrapper 会被忽略
+                        let minimal: [String: Any] = ["usesGlobal": false, "wrapper": runnerPath]
                         guard let out = try? JSONSerialization.data(withJSONObject: minimal, options: [.prettyPrinted, .sortedKeys]),
                               (try? out.write(to: URL(fileURLWithPath: cfg))) != nil else { continue }
                         wired += 1
