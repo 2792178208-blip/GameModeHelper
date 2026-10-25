@@ -1,6 +1,6 @@
 # GameModeHelper
 
-[![build](https://github.com/OWNER/GameModeHelper/actions/workflows/build.yml/badge.svg)](../../actions)
+[![build](https://github.com/2792178208-blip/GameModeHelper/actions/workflows/build.yml/badge.svg)](../../actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-14%2B-black)](#requirements)
 [![Platform](https://img.shields.io/badge/Apple%20Silicon-only-orange)](#requirements)
@@ -65,7 +65,7 @@ Full decision chain: `IdentifiedGameGrant` (from the declaration) → `Frontmost
 **Option B: build from source**
 
 ```bash
-git clone https://github.com/OWNER/GameModeHelper.git
+git clone https://github.com/2792178208-blip/GameModeHelper.git
 cd GameModeHelper
 ./build.sh install   # build and install to ~/Applications
 ./selftest.sh        # optional: 12 built-in + 6 end-to-end checks

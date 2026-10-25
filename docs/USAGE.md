@@ -29,7 +29,7 @@
 **方式二：源码构建**
 
 ```bash
-git clone https://github.com/OWNER/GameModeHelper.git
+git clone https://github.com/2792178208-blip/GameModeHelper.git
 cd GameModeHelper && ./build.sh install
 ```
 
@@ -178,5 +178,5 @@ rm -rf ~/Library/Application\ Support/GameModeHelper ~/Library/Logs/GameModeHelp
 
 ---
 
-问题未解决？请到 GitHub 提 [Issue](https://github.com/OWNER/GameModeHelper/issues)，
+问题未解决？请到 GitHub 提 [Issue](https://github.com/2792178208-blip/GameModeHelper/issues)，
 附上系统版本、芯片、App 名称与日志片段。

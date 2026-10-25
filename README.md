@@ -1,6 +1,6 @@
 # 游戏模式助手 GameModeHelper
 
-[![build](https://github.com/OWNER/GameModeHelper/actions/workflows/build.yml/badge.svg)](../../actions)
+[![build](https://github.com/2792178208-blip/GameModeHelper/actions/workflows/build.yml/badge.svg)](../../actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-14%2B-black)](#系统要求)
 [![Platform](https://img.shields.io/badge/Apple%20Silicon-only-orange)](#系统要求)
@@ -76,7 +76,7 @@ Game mode status is now off.       ← 退出后自动还原
 **方式二：从源码构建**
 
 ```bash
-git clone https://github.com/OWNER/GameModeHelper.git
+git clone https://github.com/2792178208-blip/GameModeHelper.git
 cd GameModeHelper
 ./build.sh install   # 构建并安装到 ~/Applications
 ./selftest.sh        # 可选：跑一遍自检（12 项内置 + 6 项端到端）
