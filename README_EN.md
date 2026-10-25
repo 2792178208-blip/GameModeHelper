@@ -7,7 +7,7 @@
 
 English ｜ **[中文](README.md)**
 
-A macOS menu bar utility that adds the **Game Mode declaration to any app**, so macOS
+A macOS desktop utility (main-window app) that adds the **Game Mode declaration to any app**, so macOS
 automatically turns on **Game Mode** (CPU/GPU priority, reduced background activity, doubled
 Bluetooth accessory polling rate) whenever the app runs in native fullscreen.
 
@@ -58,8 +58,7 @@ Full decision chain: `IdentifiedGameGrant` (from the declaration) → `Frontmost
 
 **Option A: download a packaged release** (see Releases)
 
-1. Download `GameModeHelper-vX.Y.Z-macOS.zip` and unzip
-2. Move `GameModeHelper.app` to `~/Applications` (or anywhere)
+1. Download `GameModeHelper-vX.Y.Z-macOS.dmg`, open it and drag `GameModeHelper.app` into the "Applications" folder
 3. First launch: right-click the app → Open → Open (bypasses Gatekeeper; the app is not
    notarized), or run `xattr -cr /path/to/GameModeHelper.app`
 
@@ -74,7 +73,7 @@ cd GameModeHelper
 
 ## Usage
 
-1. Click the game controller icon in the menu bar 🎮 (menu-bar-only, no Dock icon)
+1. Open "GameModeHelper" (standard window app with a Dock icon; ⌘Q or closing the window quits it)
 2. The list **only shows running apps**; the frontmost app is pinned to the top, badged and
    auto-selected — start your game, open the panel, and it's usually already selected.
    Click "Refresh" (刷新) to re-detect

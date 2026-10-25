@@ -7,7 +7,7 @@
 
 **[English](README_EN.md)** ｜ 中文
 
-一个 macOS 菜单栏小工具：给**任意 App** 补上系统游戏模式声明，让它全屏运行时被 macOS
+一个 macOS 桌面小工具（主窗口应用）：给**任意 App** 补上系统游戏模式声明，让它全屏运行时被 macOS
 自动开启 **Game Mode**（CPU/GPU 优先调度、后台任务降载、蓝牙键鼠手柄采样率翻倍）。
 
 > 典型场景：CrossOver / Whisky / Parallels 里的 Windows 游戏、RetroArch / OpenEmu 等模拟器、
@@ -69,8 +69,7 @@ Game mode status is now off.       ← 退出后自动还原
 
 **方式一：下载打包好的 App**（见 Releases）
 
-1. 下载 `GameModeHelper-vX.Y.Z-macOS.zip` 并解压
-2. 把 `GameModeHelper.app` 拖进 `~/Applications`（或任意位置）
+1. 下载 `GameModeHelper-vX.Y.Z-macOS.dmg`，打开后把 `GameModeHelper.app` 拖入右侧的「Applications」文件夹
 3. 首次打开：右键点 App →「打开」→ 再点「打开」（绕过 Gatekeeper；App 未做公证）
    或在终端执行 `xattr -cr /path/to/GameModeHelper.app`
 
@@ -85,7 +84,7 @@ cd GameModeHelper
 
 ## 使用
 
-1. 点菜单栏的手柄图标 🎮（纯菜单栏常驻，没有 Dock 图标）
+1. 打开「游戏模式助手」（标准窗口应用，有 Dock 图标；⌘Q 或关闭窗口即退出）
 2. **列表只显示正在运行的 App**；前台 App 自动排最前、带「前台」徽标并自动选中——
    先启动游戏，再点开面板，游戏通常已经被选好了。点「刷新」可重新检测
 3. 点「开启游戏模式支持」；需要管理员权限时**只输一次密码**（本次运行期间不再询问；

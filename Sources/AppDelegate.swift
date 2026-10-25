@@ -1,15 +1,10 @@
 import Cocoa
 import SwiftUI
-import UserNotifications
 
-final class AppDelegate: NSObject, NSApplicationDelegate,
-                          NSPopoverDelegate, UNUserNotificationCenterDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate {
     private let core = HelperCore.shared
     private lazy var model: PanelModel = PanelModel()
-    private var statusItem: NSStatusItem!
-    private var popover: NSPopover!
-    private var hosting: NSHostingController<PanelView>!
-    private var lastCloseTime: TimeInterval = 0
+    private var window: NSWindow?
     let headless: Bool
 
     init(headless: Bool) {
@@ -25,59 +20,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate,
             }
             return
         }
-        NSApp.setActivationPolicy(.accessory)
-        UNUserNotificationCenter.current().delegate = self
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
-
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "gamecontroller", accessibilityDescription: "游戏模式助手")
-            button.image?.isTemplate = true
-            button.action = #selector(togglePopover)
-            button.target = self
-        }
-
-        hosting = NSHostingController(rootView: PanelView(model: model))
-        popover = NSPopover()
-        popover.behavior = .transient
-        popover.delegate = self
-        popover.contentViewController = hosting
-        popover.contentSize = NSSize(width: 420, height: 620)
-
-        core.log("App 启动（UI 模式）")
+        // 主窗口应用：Dock 图标 + 标准窗口（⌘Q / 红色关闭即退出）
+        let rootView = PanelView(model: model)
+        let hosting = NSHostingController(rootView: rootView)
+        let w = NSWindow(contentViewController: hosting)
+        w.title = "游戏模式助手"
+        w.styleMask = [.titled, .closable, .miniaturizable]
+        w.contentMinSize = NSSize(width: 440, height: 480)
+        w.center()
+        w.makeKeyAndOrderFront(nil)
+        window = w
+        NSApp.activate(ignoringOtherApps: true)
+        core.log("App 启动（主窗口模式）")
     }
 
-    // MARK: - 菜单栏交互
-
-    @objc private func togglePopover() {
-        guard let button = statusItem?.button else { return }
-        if popover.isShown {
-            popover.performClose(nil)
-            return
-        }
-        let now = Date().timeIntervalSince1970
-        if now - lastCloseTime < 0.35 { return }
-        model.refresh()
-        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-        DispatchQueue.main.async {
-            self.hosting.view.layoutSubtreeIfNeeded()
-            self.popover.contentSize = NSSize(width: 420, height: max(420, self.hosting.view.fittingSize.height))
-        }
-    }
-
-    func popoverDidClose(_ notification: Notification) {
-        lastCloseTime = Date().timeIntervalSince1970
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        true   // 关窗口即退出（工具型 App 的标准行为）
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        core.log("App 退出（用户操作）——HMCL 接线配置与备份保留在磁盘")
-    }
-
-    func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                willPresent notification: UNNotification,
-                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        if #available(macOS 11.0, *) { completionHandler([.banner, .sound]) }
-        else { completionHandler([.alert, .sound]) }
+        core.log("App 退出——HMCL 接线配置与备份保留在磁盘")
     }
 
     // MARK: - 命令行

@@ -4,6 +4,16 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.2.0] - 2026-10-25
+
+### 变更
+
+- **主窗口应用**：从菜单栏常驻改为标准窗口（Dock 图标、⌘Q/关窗即退出、退出确认与日志保留）；
+  面板功能与交互全部不变
+- **安装包改为 DMG**：`./build.sh dmg` 一键生成，打开后拖入 Applications 即用
+- 修复测试残留：LaunchServices 注册库中的过期游戏标志（还原 plist 后未刷新注册导致
+  ZCode 等被反复误判为游戏）；当前「还原默认」已内置注册刷新
+
 ## [1.1.0] - 2026-10-25
 
 ### 新增

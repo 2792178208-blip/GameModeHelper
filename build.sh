@@ -60,4 +60,17 @@ if [ "${1:-}" = "install" ]; then
   echo "已安装：~/Applications/GameModeHelper.app"
 fi
 
+if [ "${1:-}" = "dmg" ]; then
+  echo "==> 打包 DMG"
+  VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Info.plist)
+  DMG="GameModeHelper-v${VERSION}-macOS.dmg"
+  STAGE=$(mktemp -d /tmp/gmh-dmg.XXXXXX)
+  cp -R "$APP" "$STAGE/"
+  ln -s /Applications "$STAGE/Applications"
+  rm -f "$DMG"
+  hdiutil create -volname "GameModeHelper" -srcfolder "$STAGE" -ov -format UDZO "$DMG" >/dev/null
+  rm -rf "$STAGE"
+  echo "已生成：$DMG"
+fi
+
 echo "==> 完成：$APP"

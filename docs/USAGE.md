@@ -20,8 +20,8 @@
 
 **方式一：使用打包好的 App（推荐）**
 
-1. 从 GitHub Releases 下载 `GameModeHelper-vX.Y.Z-macOS.zip`，解压
-2. 把 `GameModeHelper.app` 拖入「访达 → 前往 → 个人主目录 → 应用程序」（即 `~/Applications`）
+1. 从 GitHub Releases 下载 `GameModeHelper-vX.Y.Z-macOS.dmg`，双击打开
+2. 把左侧的 `GameModeHelper.app` 拖进右侧的「Applications」文件夹（完成安装）
 3. 双击打开会提示"无法验证开发者"——这是正常的（App 未做公证）。两种解决办法：
    - 右键点 App →「打开」→ 再点「打开」
    - 或终端执行：`xattr -cr ~/Applications/GameModeHelper.app`
@@ -33,12 +33,12 @@ git clone https://github.com/OWNER/GameModeHelper.git
 cd GameModeHelper && ./build.sh install
 ```
 
-**首次启动后**：菜单栏右上角出现 🎮 手柄图标。App 纯菜单栏常驻、没有 Dock 图标。
+**打开方式**：启动台或应用程序文件夹里点开「游戏模式助手」。标准窗口应用：有 Dock 图标，⌘Q 或点窗口红色关闭钮即退出（接线配置与备份保留在磁盘，随时可再打开）。
 
 ## 3. 给 App 开启游戏模式（核心流程）
 
 1. **先启动你的游戏**（让它在运行）
-2. 点菜单栏 🎮 图标，打开面板
+2. 打开「游戏模式助手」主窗口
 3. 列表里**只显示正在运行的 App**：
    - 前台 App 排在第一位，带蓝色「前台」徽标，并已自动选中
    - 如果列表里没有你要的（游戏还没启动），点「选择 App…」手动挑选任何 `.app`
@@ -50,7 +50,7 @@ cd GameModeHelper && ./build.sh install
    - 为什么必须重启：系统的"游戏身份"在进程启动那一刻判定，之后改声明不会重新识别
    - App 会正常退出再自动打开（只重启这一个 App，未保存内容请先保存）
 6. 把游戏切到**原生全屏**（⌃⌘F），macOS 会自动开启游戏模式
-7. 验证：按 **⌘Esc** 呼出系统 Game Overlay 查看游戏模式状态；部分情况下菜单栏也会出现
+7. 验证：按 **⌘Esc** 呼出系统 Game Overlay 查看游戏模式状态；全屏时菜单栏也会出现
    游戏手柄图标
 
 ## 4. 授权说明（密码只输一次）
